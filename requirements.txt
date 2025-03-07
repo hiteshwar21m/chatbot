@@ -7,5 +7,7 @@ bitsandbytes
 huggingface_hub
 python-dotenv
 langchain-community
+accelerate>=0.26.0
+torch>=2.0.0
 
 
