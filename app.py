@@ -1,6 +1,5 @@
 import os
 import time
-import traceback
 import streamlit as st
 from langchain.llms import HuggingFacePipeline
 from langchain.vectorstores import FAISS
@@ -9,9 +8,11 @@ from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
-# If running on Streamlit Cloud, set your Hugging Face token from secrets.
+# Set your Hugging Face token from Streamlit secrets.
 if "HUGGINGFACEHUB_API_TOKEN" in st.secrets:
     os.environ["HUGGINGFACEHUB_API_TOKEN"] = st.secrets["HUGGINGFACEHUB_API_TOKEN"]
+
+AUTH_TOKEN = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
 
 class LocalMANITChatbot:
     def __init__(self, vector_db_path: str, model_name: str):
@@ -26,11 +27,12 @@ class LocalMANITChatbot:
         )
         
         # Load the quantized model using Transformers with bitsandbytes support in 4-bit precision.
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        tokenizer = AutoTokenizer.from_pretrained(model_name, use_auth_token=AUTH_TOKEN)
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             load_in_4bit=True,       # Enable 4-bit quantization.
-            device_map="auto"        # Automatically assign the model to available devices.
+            device_map="auto",       # Automatically assign the model to available devices.
+            use_auth_token=AUTH_TOKEN
         )
         
         # Create a text-generation pipeline with the quantized model.
@@ -49,7 +51,7 @@ class LocalMANITChatbot:
             verbose=False,
         )
         
-        # Define a custom prompt template that instructs the model to answer strictly based on the provided context.
+        # Define a custom prompt template.
         self.prompt_template = (
             "[INST] Use the following context strictly to answer the question.\n"
             "Context:\n{context}\n\n"
@@ -63,10 +65,10 @@ class LocalMANITChatbot:
         docs = self.vector_db.similarity_search(question, k=5)
         context = "\n".join([doc.page_content for doc in docs])
         
-        # Format the prompt with the retrieved context and question.
+        # Format the prompt.
         prompt = self.prompt_template.format(context=context, question=question)
         
-        # Generate the raw response from the quantized model.
+        # Generate the raw response.
         raw_response = self.llm(prompt)
         
         # Post-process: remove the prompt portion if present.
@@ -81,7 +83,6 @@ vector_db_path = "manit_vector_db/faiss_index"
 # Model name for Meta-Llama's Llama-3.1-8B-Instruct (4-bit quantized).
 model_name = "meta-llama/Llama-3.1-8B-Instruct"
 
-# Cache the chatbot so it isn't reloaded on every interaction.
 @st.cache_resource(show_spinner=False)
 def load_chatbot():
     return LocalMANITChatbot(vector_db_path, model_name)
@@ -91,27 +92,23 @@ chatbot = load_chatbot()
 st.title("MANIT Knowledge Assistant")
 st.markdown("Ask questions about MANIT's departments, research, and publications.")
 
-# Container for the chat conversation.
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# User input.
 user_input = st.text_input("Your question:", placeholder="Enter your question here...")
 
 if st.button("Submit") and user_input:
     st.session_state.chat_history.append(("User", user_input))
-    
-    answer_container = st.empty()  # Container for streaming answer.
+    answer_container = st.empty()
     full_answer = chatbot.query(user_input)
-    tokens = full_answer.split()  # Tokenize by whitespace.
+    tokens = full_answer.split()
     cumulative = ""
     for token in tokens:
         cumulative += token + " "
         answer_container.markdown(cumulative)
-        time.sleep(0.05)  # Adjust the delay as desired.
+        time.sleep(0.05)
     st.session_state.chat_history.append(("Bot", cumulative))
-    
-# Display the conversation history.
+
 for speaker, text in st.session_state.chat_history:
     if speaker == "User":
         st.markdown(f"**User:** {text}")
