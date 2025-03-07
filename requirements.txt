@@ -6,4 +6,6 @@ transformers
 bitsandbytes
 huggingface_hub
 python-dotenv
+langchain-community
+
 
