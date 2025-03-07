@@ -70,7 +70,7 @@ class LocalMANITChatbot:
         return answer
 
 # Update these paths as needed
-vector_db_path = "/content/drive/MyDrive/manit_vector_db/faiss_index"  # Path to your FAISS index
+vector_db_path = "manit_vector_db/faiss_index"  # Path to your FAISS index
 model_name = "google/flan-t5-base"  # Smaller model for testing
 
 # Cache the chatbot so it loads only once.
