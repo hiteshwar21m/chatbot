@@ -9,11 +9,9 @@ from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
-# Optionally, if you use a Hugging Face token, set it in your environment beforehand.
-# For example: export HUGGINGFACEHUB_API_TOKEN="your_token_here"
-from dotenv import load_dotenv
-load_dotenv()
-
+# If running on Streamlit Cloud, set your Hugging Face token from secrets.
+if "HUGGINGFACEHUB_API_TOKEN" in st.secrets:
+    os.environ["HUGGINGFACEHUB_API_TOKEN"] = st.secrets["HUGGINGFACEHUB_API_TOKEN"]
 
 class LocalMANITChatbot:
     def __init__(self, vector_db_path: str, model_name: str):
@@ -41,7 +39,7 @@ class LocalMANITChatbot:
             model=model,
             tokenizer=tokenizer,
             temperature=0.1,
-            max_new_tokens=256,  # Adjust as needed.
+            max_new_tokens=512,  # Adjust as needed.
         )
         
         # Wrap the pipeline with LangChain's HuggingFacePipeline.
@@ -80,7 +78,7 @@ class LocalMANITChatbot:
 
 # Update this path to your actual FAISS index location.
 vector_db_path = "manit_vector_db/faiss_index"
-# Model name for Meta-Llama's Llama-3.1-8B-Instruct (4-bit quantized)
+# Model name for Meta-Llama's Llama-3.1-8B-Instruct (4-bit quantized).
 model_name = "meta-llama/Llama-3.1-8B-Instruct"
 
 # Cache the chatbot so it isn't reloaded on every interaction.
